@@ -1,3 +1,6 @@
+![image](https://github.com/user-attachments/assets/339c32ab-0ba5-437a-95e5-5aac8e33592e)
+
+
 ### План разработки игры:
 
 1. **Структура проекта**
