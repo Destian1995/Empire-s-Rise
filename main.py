@@ -1,12 +1,9 @@
-import kivy
 from kivy.app import App
 from kivy.uix.widget import Widget
-from kivy.graphics import Color, Ellipse, Rectangle
+from kivy.graphics import Color, Ellipse, Rectangle, Line
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
-import random
-import math
 
 # Размеры окна
 screen_width, screen_height = 1200, 800
@@ -20,58 +17,45 @@ fortress_colors = {
     "Этерия": (0, 0.5, 0.5)
 }
 
-# Определение регионов княжеств
-kingdom_regions = {
-    "Аркадия": (70, 20, 150, 250),
-    "Селесия": (150, 530, 140, 200),
-    "Хиперион": (500, 200, 200, 200),
-    "Халидон": (800, 150, 250, 250),
-    "Этерия": (1025, 450, 100, 100)
-}
-
-# Проверка минимального расстояния между точками
-def is_far_enough(new_point, existing_points, min_distance):
-    for point in existing_points:
-        distance = math.sqrt((new_point[0] - point[0]) ** 2 + (new_point[1] - point[1]) ** 2)
-        if distance < min_distance:
-            return False
-    return True
-
-# Генерация точек для деревень и крепостей
-def generate_points_in_region(region, num_points, min_distance):
-    points = []
-    attempts = 0
-    max_attempts = num_points * 100
-
-    while len(points) < num_points and attempts < max_attempts:
-        x = random.randint(region[0], region[0] + region[2])
-        y = random.randint(region[1], region[1] + region[3])
-
-        if is_far_enough((x, y), points, min_distance):
-            points.append((x, y))
-
-        attempts += 1
-
-    return points
-
-# Генерация крепостей и деревень
-kingdom_points = {}
-for kingdom, region in kingdom_regions.items():
-    if kingdom == "Хиперион":
-        num_fortresses = 13
-    elif kingdom == "Аркадия":
-        num_fortresses = 7
-    elif kingdom == "Селесия":
-        num_fortresses = 5
-    elif kingdom == "Халидон":
-        num_fortresses = 6
-    elif kingdom == "Этерия":
-        num_fortresses = 4
-
-    kingdom_points[kingdom] = {
-        "fortresses": generate_points_in_region(region, num_fortresses, min_distance=30),
-        "towns": generate_points_in_region(region, random.randint(6, 10), min_distance=20)
+# Координаты крепостей и деревень для каждого княжества
+# Добавлены параметры вершин 7-угольников для каждой крепости
+kingdom_points = {
+    "Аркадия": {
+        "fortresses": [
+            {"pos": (80, 100), "polygon": [(30, 40), (70, 20), (50, -30), (-20, -50), (-70, -20), (-50, 30), (20, 50)]},
+            {"pos": (120, 150), "polygon": [(40, 50), (80, 30), (60, -40), (-30, -60), (-80, -30), (-60, 40), (30, 60)]}
+        ],
+        "towns": [(90, 120), (130, 180), (170, 230), (210, 270), (230, 120), (250, 160), (270, 200)]
+    },
+    "Селесия": {
+        "fortresses": [
+            {"pos": (180, 560), "polygon": [(30, 40), (70, 20), (50, -30), (-20, -50), (-70, -20), (-50, 30), (20, 50)]},
+            {"pos": (200, 600), "polygon": [(40, 50), (80, 30), (60, -40), (-30, -60), (-80, -30), (-60, 40), (30, 60)]}
+        ],
+        "towns": [(190, 570), (210, 620), (230, 660), (250, 700)]
+    },
+    "Хиперион": {
+        "fortresses": [
+            {"pos": (510, 220), "polygon": [(40, 50), (70, 20), (60, -40), (-20, -60), (-70, -20), (-60, 40), (30, 50)]},
+            {"pos": (710, 120), "polygon": [(40, 50), (70, 20), (60, -40), (-20, -60), (-70, -20), (-60, 40), (30, 50)]},
+            {"pos": (810, 420), "polygon": [(40, 50), (70, 20), (60, -40), (-20, -60), (-70, -20), (-60, 40), (30, 50)]},
+            {"pos": (310, 200), "polygon": [(70, 90), (80, 90), (60, -90), (-10, -30), (-10, -30), (-20, 50), (30, 70)]} #южный
+        ],
+        "towns": [(220, 240), (540, 280), (560, 320), (580, 360), (600, 400)]
+    },
+    "Халидон": {
+        "fortresses": [
+            {"pos": (820, 160), "polygon": [(40, 60), (70, 40), (60, -40), (-30, -60), (-70, -30), (-60, 40), (30, 60)]}
+        ],
+        "towns": [(750, 270), (850, 220), (870, 260), (890, 300)]
+    },
+    "Этерия": {
+        "fortresses": [
+            {"pos": (1030, 460), "polygon": [(40, 50), (80, 30), (60, -40), (-30, -60), (-80, -30), (-60, 40), (30, 50)]}
+        ],
+        "towns": [(1040, 370), (900, 510), (1080, 550)]
     }
+}
 
 # Виджет карты
 class MapWidget(Widget):
@@ -89,15 +73,34 @@ class MapWidget(Widget):
 
     def draw_map(self):
         for kingdom, points in kingdom_points.items():
-            # Отрисовка крепостей
-            for fortress in points["fortresses"]:
-                Color(*fortress_colors[kingdom])
+            # Отрисовка крепостей с границами в виде настраиваемых полигонов
+            for fortress_data in points["fortresses"]:
+                fortress = fortress_data["pos"]
+                polygon = fortress_data["polygon"]
+
+                # Рисуем крепость
+                Color(*fortress_colors[kingdom])  # Цвет крепости
                 Ellipse(pos=(fortress[0] + self.map_pos[0], fortress[1] + self.map_pos[1]), size=(20, 20))
+
+                # Рисуем полигон вокруг крепости
+                self.draw_custom_polygon(fortress[0] + 10 + self.map_pos[0], fortress[1] + 10 + self.map_pos[1], polygon)
 
             # Отрисовка деревень
             for town in points["towns"]:
                 Color(1, 1, 1)
                 Ellipse(pos=(town[0] + self.map_pos[0], town[1] + self.map_pos[1]), size=(10, 10))
+
+    def draw_custom_polygon(self, x_center, y_center, polygon_points):
+        """Отрисовка полигона на основе списка точек относительно крепости."""
+        points = []
+
+        for point in polygon_points:
+            x = x_center + point[0]
+            y = y_center + point[1]
+            points.extend([x, y])
+
+        Color(1, 1, 1, 0.5)  # Полупрозрачная граница
+        Line(points=points, close=True, width=1)
 
     def on_touch_down(self, touch):
         # Запоминаем начальную точку касания
